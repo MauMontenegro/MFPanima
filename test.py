@@ -1,3 +1,4 @@
+import numpy as np
 from manim import *
 import networkx as nx
 import json
@@ -21,45 +22,75 @@ class AnimateMFP(Scene):
         labeled = set()
         fire = set()
 
+        def burnVertices(fire_t):
+            neighbors = []
+            for fire_vertex in fire_t:
+                neighbors = neighbors + list(G.neighbors(fire_vertex))
+            self.play(*[g.vertices[e].animate.set_color(BURNED) for e in neighbors])
+            self.wait(1)
+            fire_t.clear()
+            fire_t |= set(neighbors)
+
         # Load Instance
         G,G_dist,pos,starting_fire,N = self.loadPaperInstance()
         # Adding fire roots to initial fire vertices
         for fire_root in starting_fire:
             fire.add(fire_root)
+
         intG = [[float(f'{ele:.2f}') for ele in sub] for sub in G_dist]
         D= Matrix(intG)
+        G_label = MarkupText(f'<span fgcolor="{GREEN}"> &lt; G </span>',color=WHITE).scale(.5).move_to([2.5*x_step , 3.5 * y_step, 0])
+        F_label = MarkupText(f'<span fgcolor="{RED}">F</span>',color=WHITE).scale(.5).move_to([3.25*x_step, 3.5 * y_step, 0])
+        a_label = MarkupText(f'<span fgcolor="{BLUE}">a</span>',color=WHITE).scale(0.5).move_to([3.75* x_step, 3.5 * y_step, 0])
+        Ts_label = MarkupText(f'<span fgcolor="{WHITE}">Ts</span>',color=WHITE).scale(0.5).move_to([4.5* x_step, 3.5 * y_step, 0])
+        f_label = MarkupText(f'<span fgcolor="{WHITE}"> f &gt; </span>', color=WHITE).scale(0.5).move_to([5*x_step, 3.5 * y_step, 0])
         D.scale(0.3).move_to([-4.5*x_step,-2.5*y_step,0])
 
         # Introduction
+        Intro=[]
         Title = Tex("Moving Firefighter Problem").move_to([-4.5*x_step,4*y_step,0])
-        Intro_1 = MarkupText(f'A MFP can be modeled by a <span fgcolor="{GREEN}"> Graph (G=(V,E))</span>',color=WHITE)\
-            .scale(.3).move_to([-4.5*x_step,3*y_step,0])
+        Intro_1 = MarkupText(f'A MFP can be modeled by a <span fgcolor="{GREEN}"> Graph (G=(V,E))</span>',color=WHITE).scale(.3).move_to([-4.5*x_step,3*y_step,0])
         Intro_2 = MarkupText(f'A subset <span fgcolor="{RED}"> F</span> of vertices where the source of the spreading starts',color=WHITE)\
             .scale(.3).move_to([-4.5*x_step,2.5*y_step,0])
         Intro_3 = MarkupText(f'An initial depot position <span fgcolor="{BLUE}"> a</span> where the firefighter is deployed',color=WHITE)\
             .scale(.3).move_to([-4.5*x_step,2*y_step,0])
         Intro_4 =  MarkupText(f'A <b>T</b> function which gives distances between all vertices of G (including firefighter)',color=WHITE)\
             .scale(.3).move_to([-4.5*x_step,1.5*y_step,0])
-        Intro_5 = MarkupText(f'A spreading ratio function <b>f</b>',
-                             color=WHITE) \
-            .scale(.3).move_to([-4.5 * x_step, 1.5 * y_step, 0])
+        Intro_5 = MarkupText(f'A spreading ratio function <b>f</b>',color=WHITE).scale(.3).move_to([-4.5 * x_step, 1 * y_step, 0])
+        Intro.extend([Intro_1,Intro_2,Intro_3,Intro_4,Intro_5])
+        Intro_group= VGroup(*Intro)
+
         # Create Graph Mobject
         g = Graph(list(G.nodes), list(G.edges), layout=pos, labels=True,
                   vertex_config={'radius': 0.20}) \
             .scale(1).move_to([0,0,0])
 
+        # Construct TimeLine
+        timeline=[]
+        timeline_0 = Line(start=([3*x_step,-2.5*y_step,0]),end=([7*x_step,-2.5*y_step,0]))
+        timeline_1 = Line(start=([3*x_step,-2.7*y_step,0]),end=([3*x_step,-2.3*y_step,0]))
+        timeline_2 = Line(start=([4*x_step, -2.7*y_step, 0]), end=([4*x_step, -2.3*y_step, 0]))
+        timeline_3 = Line(start=([5*x_step, -2.7*y_step, 0]), end=([5*x_step, -2.3*y_step, 0]))
+        timeline_4 = Line(start=([6*x_step, -2.7*y_step, 0]), end=([6*x_step, -2.3*y_step, 0]))
+        timeline_5 = Line(start=([7*x_step, -2.7*y_step, 0]), end=([7*x_step, -2.3*y_step, 0]))
+        t_init_pos=np.array([3*x_step,-2.5*y_step,0])
+        timeline.extend([timeline_0,timeline_1,timeline_2,timeline_3,timeline_4,timeline_5])
+        time_group=VGroup(*timeline)
 
         self.play(FadeIn(Title))
         self.play(Write(Intro_1))
+        self.play(FadeIn(G_label))
         self.wait()
         self.play(Create(g), run_time=2)
         self.play(g.animate.move_to([4, 0, 0]).scale(0.9))
-        self.play(*[Flash(g.vertices[i],color=WHITE,flash_radius=0.09) for i in g.vertices])
+        self.play(Circumscribe(g))
         self.play(Write(Intro_2))
+        self.play(FadeIn(F_label))
         # Position Initial Fire
         self.play(*[g.vertices[e].animate.set_color(BURNED) for e in fire])
         self.play(*[Flash(g.vertices[i],color=BURNED,flash_radius=0.09) for i in fire])
         self.play(Write(Intro_3))
+        self.play(FadeIn(a_label))
         firefighter = (Circle(fill_color=PROTECTED, fill_opacity=1, stroke_color=PROTECTED)
                        .move_to(g.vertices[N]).scale(.18))
         self.play(FadeIn(firefighter))
@@ -67,7 +98,33 @@ class AnimateMFP(Scene):
         self.wait()
         self.play(Write(Intro_4))
         self.play(FadeIn(D))
+        self.play(Transform(D,Ts_label))
         self.play(Write(Intro_5))
+        self.play(FadeIn(f_label))
+        self.play(FadeIn(time_group))
+
+        # Animated Timeline
+        save_state=[g[v].save_state() for v in g.vertices]
+        arrow = Arrow(start=t_init_pos+np.array([0,-1,0]), end=t_init_pos, color=GOLD)
+        arrow_state=arrow.save_state()
+        self.add(arrow)
+        self.wait()
+        fratetx = Tex("Fire Rate:").scale(0.5).move_to(t_init_pos+[0,0.5*y_step,0])
+        self.add(fratetx)
+        self.wait(1)
+        fire_t = set()
+        for f in range(1,3):
+            fire_t |= fire
+            self.play(Transform(fratetx,Tex("Fire rate:"+str(f)).scale(0.5).move_to(t_init_pos+[0,0.5*y_step,0])))
+            for i in range(1,5):
+                self.play(arrow.animate.shift(RIGHT*x_step))
+                if i%f==0:
+                    burnVertices(fire_t)
+            fire_t.clear()
+            self.play(*[vertex.animate.restore() for vertex in save_state])
+            self.play(arrow.animate.restore())
+
+
 
         def defenseStrategy(starting_fire,firefighter,fire,agent_pos,neighbors,unexplored_neighbors):
             update = 1  # Rate of fire spread
@@ -129,7 +186,21 @@ class AnimateMFP(Scene):
         unexplored_neighbors = [w for w in neighbors if w not in labeled]
         neighbors=[]
 
-        defenseStrategy(starting_fire,firefighter,fire,agent_pos,neighbors,unexplored_neighbors)
+        self.play(FadeOut(Intro_group))
+        solution_label = MarkupText(f'A feasible solution for <b>MFP</b> is a sequence of vertices: <span fgcolor="{BLUE}"> S </span>', color=WHITE).scale(0.3).move_to(
+            [-3.5*x_step, 2.5 * y_step, 0])
+        Solution = MarkupText(f'<span fgcolor="{BLUE}"> S=(a,u_1,...,u_l) </span>', color=WHITE).scale(0.3).move_to(solution_label.get_center()+[0,-1*y_step,0])
+        solution_label_2=MarkupText("Such that satisfy next equation for i=1,2,...,l:").scale(0.3).move_to(Solution.get_center()+[0,-1*y_step,0])
+        solution_label_3=MathTex(r"\tau(a,u_1) + \sum_{k=1}^{i-1} \tau(u_k,u_{k+1}) \le \beta_{\mathcal{S}_i}").scale(0.5).move_to(solution_label_2.get_center()+[0,-1*y_step,0])
+        self.play(Write(solution_label))
+        self.wait(1)
+        self.play(Write(Solution))
+        self.wait(1)
+        self.play(Write(solution_label_2))
+        self.wait(1)
+        self.play(Write(solution_label_3))
+        self.wait(1)
+        #defenseStrategy(starting_fire,firefighter,fire,agent_pos,neighbors,unexplored_neighbors)
 
     def MoveScalingGraph(self,mob):
         mob.move_to([4, 0, 0])
