@@ -22,14 +22,27 @@ class AnimateMFP(Scene):
         labeled = set()
         fire = set()
 
-        def burnVertices(fire_t):
+        fire_labels=[]
+        lbld=[]
+        def burnVertices(fire_t,i,f):
+            fire_label= Tex(str(i-1),color=YELLOW).scale(0.3)
+            for element in fire_t:
+                if f==1:
+                    fire_copy=fire_label.copy()
+                    self.add(fire_copy.move_to(g.vertices[element]))
+                    fire_labels.extend([fire_copy])
             neighbors = []
+            unexplored_neighbors = []
             for fire_vertex in fire_t:
                 neighbors = neighbors + list(G.neighbors(fire_vertex))
-            self.play(*[g.vertices[e].animate.set_color(BURNED) for e in neighbors])
-            self.wait(1)
+            for fire in fire_t:
+                lbld.append(fire)
+            unexplored_neighbors = [w for w in neighbors if w not in lbld]
+            if unexplored_neighbors:
+                self.play(*[g.vertices[e].animate.set_color(BURNED) for e in unexplored_neighbors])
+                self.wait(1)
             fire_t.clear()
-            fire_t |= set(neighbors)
+            fire_t |= set(unexplored_neighbors)
 
         # Load Instance
         G,G_dist,pos,starting_fire,N = self.loadPaperInstance()
@@ -42,7 +55,7 @@ class AnimateMFP(Scene):
         G_label = MarkupText(f'<span fgcolor="{GREEN}"> &lt; G </span>',color=WHITE).scale(.5).move_to([2.5*x_step , 3.5 * y_step, 0])
         F_label = MarkupText(f'<span fgcolor="{RED}">F</span>',color=WHITE).scale(.5).move_to([3.25*x_step, 3.5 * y_step, 0])
         a_label = MarkupText(f'<span fgcolor="{BLUE}">a</span>',color=WHITE).scale(0.5).move_to([3.75* x_step, 3.5 * y_step, 0])
-        Ts_label = MarkupText(f'<span fgcolor="{WHITE}">Ts</span>',color=WHITE).scale(0.5).move_to([4.5* x_step, 3.5 * y_step, 0])
+        Ts_label = MarkupText(f'<span fgcolor="{WHITE}">Ts</span>',color=WHITE).scale(0.5).move_to([4.25* x_step, 3.5 * y_step, 0])
         f_label = MarkupText(f'<span fgcolor="{WHITE}"> f &gt; </span>', color=WHITE).scale(0.5).move_to([5*x_step, 3.5 * y_step, 0])
         D.scale(0.3).move_to([-4.5*x_step,-2.5*y_step,0])
 
@@ -112,19 +125,22 @@ class AnimateMFP(Scene):
         fratetx = Tex("Fire Rate:").scale(0.5).move_to(t_init_pos+[0,0.5*y_step,0])
         self.add(fratetx)
         self.wait(1)
+
         fire_t = set()
-        for f in range(1,3):
+        for f in range(1,3): # Fire rates
+            lbld = []
             fire_t |= fire
             self.play(Transform(fratetx,Tex("Fire rate:"+str(f)).scale(0.5).move_to(t_init_pos+[0,0.5*y_step,0])))
-            for i in range(1,5):
+            for i in range(1,5): # Arrow movements
                 self.play(arrow.animate.shift(RIGHT*x_step))
                 if i%f==0:
-                    burnVertices(fire_t)
+                    burnVertices(fire_t,i,f)
             fire_t.clear()
             self.play(*[vertex.animate.restore() for vertex in save_state])
             self.play(arrow.animate.restore())
-
-
+            if f==1:
+                fire_labels_group=VGroup(*fire_labels)
+        self.play(*[label.animate.move_to(label.get_center()+[0,-1/3*y_step,0]) for label in fire_labels_group])
 
         def defenseStrategy(starting_fire,firefighter,fire,agent_pos,neighbors,unexplored_neighbors):
             update = 1  # Rate of fire spread
@@ -134,13 +150,14 @@ class AnimateMFP(Scene):
             while unexplored_neighbors:
                 if flag==0:
                     travel_time += G_dist[agent_pos][solution[s]]
-                print(travel_time)
-                print((solution[s]))
                 if travel_time <= update:
                     # Animate movement of firefighter
+                    dash_movement=DashedLine(start=([firefighter.get_center()]),end=([g.vertices[solution]]),dashed_ratio=0.1,color=BLUE)
+                    self.add(dash_movement)
                     self.play(AnimationGroup(
                         firefighter.animate.move_to(g.vertices[solution[s]]),
-                        g.vertices[solution[s]].animate.set_color(PROTECTED)))
+                        g.vertices[solution[s]].animate.set_color(PROTECTED),
+                        ))
                     labeled.add(solution[s])
                     self.wait()
                     # Move to next index Solution
@@ -164,20 +181,20 @@ class AnimateMFP(Scene):
                     if unexplored_neighbors:
                         self.play(*[g.edges[e].animate.set_color(BURNED) for e in G.edges if
                                     (e[0] in fire and e[1] in unexplored_neighbors) or (e[1] in fire and e[0] in unexplored_neighbors)])
-                        #print(unexplored_neighbors)
                         self.play(*[g.vertices[e].animate.set_color(BURNED) for e in unexplored_neighbors])
                         self.play(*[Flash(g.vertices[i],color=BURNED,flash_radius=0.09) for i in unexplored_neighbors])
-                        labeled.add(tuple(unexplored_neighbors))
+
                     fire.clear()
                     fire |= set(unexplored_neighbors)
-                    print(unexplored_neighbors)
                     neighbors=[]
                     flag=1
 
 
         solution = [5,6,7]
+        labeled.clear()
         agent_pos= N
         # Add initial unlabeled vertices
+
         neighbors=[]
         for fire_vertex in fire:
             neighbors = neighbors + list(G.neighbors(fire_vertex))
@@ -192,6 +209,10 @@ class AnimateMFP(Scene):
         Solution = MarkupText(f'<span fgcolor="{BLUE}"> S=(a,u_1,...,u_l) </span>', color=WHITE).scale(0.3).move_to(solution_label.get_center()+[0,-1*y_step,0])
         solution_label_2=MarkupText("Such that satisfy next equation for i=1,2,...,l:").scale(0.3).move_to(Solution.get_center()+[0,-1*y_step,0])
         solution_label_3=MathTex(r"\tau(a,u_1) + \sum_{k=1}^{i-1} \tau(u_k,u_{k+1}) \le \beta_{\mathcal{S}_i}").scale(0.5).move_to(solution_label_2.get_center()+[0,-1*y_step,0])
+        solution_label_B= MarkupText(r'Where $\Beta_S_i$ is the time at which a vertex $u_i$ would be burned if we let fire propagate.').scale(0.3).move_to(solution_label_3.get_center()+[0,-1*y_step,0])
+        sol_label=[]
+        sol_label.extend([Solution,solution_label_2,solution_label,solution_label_B])
+        sol_group = VGroup(*sol_label)
         self.play(Write(solution_label))
         self.wait(1)
         self.play(Write(Solution))
@@ -200,7 +221,21 @@ class AnimateMFP(Scene):
         self.wait(1)
         self.play(Write(solution_label_3))
         self.wait(1)
-        #defenseStrategy(starting_fire,firefighter,fire,agent_pos,neighbors,unexplored_neighbors)
+        self.play(Write(solution_label_B))
+        self.play(*[Circumscribe(label) for label in fire_labels_group])
+        self.wait(1)
+        self.play(FadeOut(sol_group))
+        self.play(solution_label_3.animate.move_to(solution_label_3.get_center() + [0, 3 * y_step, 0]))
+        solution_label_4 = MarkupText(f'The best Feasible Solution for Graph <span fgcolor="{GREEN}"> G </span>').scale(
+            0.3).move_to(solution_label_3.get_center() + [0, -1 * y_step, 0])
+        solution_label_5 = MarkupText(f'<span fgcolor="{BLUE}"> S_G=(a,5,6,7) </span>', color=WHITE).scale(0.3).move_to(
+            solution_label_4.get_center() + [0, -1 * y_step, 0])
+        self.play(Write(solution_label_4))
+        self.wait(1)
+        self.play(Write(solution_label_5))
+        self.wait(1)
+
+        defenseStrategy(starting_fire,firefighter,fire,agent_pos,neighbors,unexplored_neighbors)
 
     def MoveScalingGraph(self,mob):
         mob.move_to([4, 0, 0])
