@@ -3,6 +3,7 @@ from manim import *
 import networkx as nx
 import json
 import math
+import decimal
 
 class AnimateMFP(Scene):
     def construct(self):
@@ -142,23 +143,43 @@ class AnimateMFP(Scene):
                 fire_labels_group=VGroup(*fire_labels)
         self.play(*[label.animate.move_to(label.get_center()+[0,-1/3*y_step,0]) for label in fire_labels_group])
 
+
         def defenseStrategy(starting_fire,firefighter,fire,agent_pos,neighbors,unexplored_neighbors):
             update = 1  # Rate of fire spread
             travel_time = 0       # time
             s = 0       # Solution index
             flag = 0
+            counter=-8
+            plus=Tex("+").scale(0.5)
+            leq_tex=MathTex(r"\leq").scale(0.5)
+            beta=[2,2,3]
             while unexplored_neighbors:
                 if flag==0:
                     travel_time += G_dist[agent_pos][solution[s]]
                 if travel_time <= update:
                     # Animate movement of firefighter
-                    dash_movement=DashedLine(start=([firefighter.get_center()]),end=([g.vertices[solution]]),dashed_ratio=0.1,color=BLUE)
+                    dash_movement = DashedLine(start=(firefighter.get_center()), end=(g.vertices[solution[s]].get_center()),
+                                               color=BLUE)
                     self.add(dash_movement)
+                    self.wait(1)
                     self.play(AnimationGroup(
                         firefighter.animate.move_to(g.vertices[solution[s]]),
                         g.vertices[solution[s]].animate.set_color(PROTECTED),
                         ))
                     labeled.add(solution[s])
+                    dash_movement_copy=dash_movement.copy()
+                    beta_tex=Tex(str(beta[s])).scale(0.5)
+                    s_seq = Tex(round(G_dist[agent_pos][solution[s]],2)).scale(0.5).move_to([counter*x_step,0,0]).copy()
+                    plus_copy=plus.copy()
+                    if s!=0 and s!=len(solution):
+                        self.play(plus_copy.animate.move_to(s_seq.get_center() + [-1 * x_step, 0, 0]))
+                    self.play(Transform(dash_movement_copy, s_seq))
+                    self.play(leq_tex.animate.move_to(s_seq.get_center()+[0.5*x_step,0,0]))
+                    self.play(beta_tex.animate.move_to(s_seq.get_center() + [1 * x_step, 0, 0]))
+                    self.wait()
+                    self.play(FadeOut(beta_tex))
+                    self.play(FadeOut(leq_tex))
+                    counter += 2
                     self.wait()
                     # Move to next index Solution
                     agent_pos = solution[s]
@@ -228,7 +249,7 @@ class AnimateMFP(Scene):
         self.play(solution_label_3.animate.move_to(solution_label_3.get_center() + [0, 3 * y_step, 0]))
         solution_label_4 = MarkupText(f'The best Feasible Solution for Graph <span fgcolor="{GREEN}"> G </span>').scale(
             0.3).move_to(solution_label_3.get_center() + [0, -1 * y_step, 0])
-        solution_label_5 = MarkupText(f'<span fgcolor="{BLUE}"> S_G=(a,5,6,7) </span>', color=WHITE).scale(0.3).move_to(
+        solution_label_5 = MarkupText(f'<span fgcolor="{BLUE}"> S=(a,5,6,7) </span>', color=WHITE).scale(0.3).move_to(
             solution_label_4.get_center() + [0, -1 * y_step, 0])
         self.play(Write(solution_label_4))
         self.wait(1)
