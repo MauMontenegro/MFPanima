@@ -5,6 +5,149 @@ import json
 import math
 import decimal
 
+
+class Testing(Scene):
+    def construct(self):
+        height = 8
+        width = 14.2
+        rows = 10
+        columns = 20
+        x_step = width / columns
+        y_step = height / rows
+
+        spr_pro_txt = []
+        spr_pro_txt0 = Tex("Imagine any diffusive process involving an initial agent and a propagation medium:").scale(0.75).move_to([0,3*y_step,0])
+        spre_pro_txt1 = Tex("-A biological virus spreading in population").scale(0.75).move_to(spr_pro_txt0.get_center()+[1*x_step,-y_step,0])
+        spre_pro_txt2 = Tex("-A computer virus on a network").scale(0.75).move_to(spr_pro_txt0.get_center()+[1*x_step,-2*y_step,0])
+        spre_pro_txt3 = Tex("-A fire spreading trough a forest").scale(0.75).move_to(spr_pro_txt0.get_center()+[1*x_step,-3*y_step,0])
+        spre_pro_txt4 = Tex("All this scenarios can be modeled by a Graph!").scale(0.75).move_to([0,3*y_step,0])
+        spre_por_txt5 = Tex("We want to stop this process by protecting some vertices of the Graph").scale(0.75).move_to([0,3*y_step,0])
+        spre_por_txt6 = Tex("On this example, we protect vertices instantly. What happens if it takes some time to protect?").scale(
+            0.75).move_to([0, 3.5 * y_step, 0])
+        divide_line=Line(start=([0,-4.5*y_step,0]),end=([0,2.5*y_step,0]))
+        spre_por_txt7=Tex("INSTANT PROTECT").scale(1).move_to([-5*x_step,2.25*y_step,0])
+        spre_por_txt8 = Tex("DELAYED PROTECT").scale(1).move_to([5 * x_step, 2.25 * y_step, 0])
+        spre_por_txt9 = Tex("FIREFIGHTER PROBLEM").scale(0.5).move_to(spre_por_txt7.get_center() + [0, -6.5 * y_step, 0])
+        spre_por_txt10 = Tex("MOVING FIREFIGHTER PROBLEM").scale(0.5).move_to(spre_por_txt8.get_center()+[0,-6.5*y_step,0])
+
+
+
+        # INSTANT PROTECT GROUP
+        i_pro=[]
+        agent=Circle(radius=0.25,color=BLUE,fill_opacity=1).move_to([-4.5,0.5,0])
+        fire = Circle(radius=0.25, color=RED,fill_opacity=1).move_to([-4, -2.5, 0])
+        protect= Circle(radius=0.25,color=WHITE,fill_opacity=1).move_to([-2,-0.5,0])
+        fire_line_i=Arrow(start=fire.get_center(),end=protect.get_center())
+        agent_arrow_i = Arrow(start=agent.get_center(), end=protect.get_center(),color=BLUE)
+        i_pro.extend([agent,fire,protect,fire_line_i])
+        i_pro_group=VGroup(*i_pro)
+
+        # DELAYED PROTECT GROUP
+        d_pro=[]
+        agent_D = Circle(radius=0.25, color=BLUE,fill_opacity=1).move_to([-4.5+6.5, 0.5, 0])
+        fire_D = Circle(radius=0.25, color=RED,fill_opacity=1).move_to([-4+6.5, -2.5, 0])
+        protect_D = Circle(radius=0.25, color=WHITE,fill_opacity=1).move_to([-2+6.5, -0.5, 0])
+        fire_line_d = Arrow(start=fire_D.get_center(), end=protect_D.get_center(),color=RED)
+        agent_arrow_D = Arrow(start=agent_D.get_center(),end=protect_D.get_center()+[-0.5*x_step,+0.25*y_step,0],color=BLUE)
+        measure_line_a = DashedLine(start=agent_D.get_center()+[0,0.5*y_step,0],end=protect_D.get_center()+[0,0.5*y_step,0])
+        measure_line_a_n= Text("5 units.").scale(0.3).set_color(ORANGE).move_to(measure_line_a.get_center()+[0,0.4*y_step,0])
+        measure_line_f = DashedLine(start=fire_D.get_center()+[0,-0.6*y_step,0],end=protect_D.get_center()+[0,-0.6*y_step,0])
+        measure_line_f_n = Text("4 units.").scale(0.3).set_color(ORANGE).move_to(measure_line_f.get_center()+[0,-.75*y_step,0])
+        d_pro.extend([agent_D, fire_D, protect_D,measure_line_a,measure_line_a_n,measure_line_f,measure_line_f_n])
+        d_pro_group = VGroup(*d_pro)
+
+        spr_pro_txt.extend([spr_pro_txt0, spre_pro_txt1, spre_pro_txt2, spre_pro_txt3])
+        spre_pro_group = VGroup(*spr_pro_txt)
+        spre_pro_group[1:].arrange(DOWN, center=False, aligned_edge=LEFT)
+        self.play(Write(spre_pro_group[0]))
+        self.wait(1)
+        c=0
+        iter=[-5,0,5]
+        imgs=[]
+        for txt in spre_pro_group[1:]:
+            self.play(Write(txt))
+            img = ImageMobject("images/s_"+str(c)+".png")
+            img.scale(0.5)
+            img.move_to([iter[c]*x_step,-3*y_step,0])
+            imgs.extend([img])
+            self.play(FadeIn(img))
+            self.wait(1)
+            c+=1
+        img_group=Group(*imgs)
+        self.play(FadeOut(spre_pro_group))
+        self.play(Write(spre_pro_txt4))
+        G_example=nx.erdos_renyi_graph(10,0.7,seed=100)
+        g_example = Graph(list(G_example.nodes), list(G_example.edges), labels=True,
+                  vertex_config={'radius': 0.20}) \
+            .scale(1).move_to([0, 0, 0])
+        self.play(FadeOut(img_group))
+        self.play(FadeIn(g_example))
+        self.play(g_example.vertices[0].animate.set_color(RED))
+        self.wait()
+
+        save_state=[g_example[v].save_state() for v in g_example.vertices]
+        #save_state_edges = [g_example[v].save_state() for v in g_example.edges]
+        fire=set()
+        fire.add(0)
+        neighborhood=[]
+        for i in range(1,4):
+            for element in fire:
+                neighborhood = neighborhood + list(G_example.neighbors(element))
+            self.play(*[g_example.vertices[e].animate.set_color(RED) for e in neighborhood])
+            self.wait(1)
+            fire.clear()
+            fire |= set(neighborhood)
+        self.play(*[vertex.animate.restore() for vertex in save_state])
+
+        self.play(FadeOut(spre_pro_txt4))
+        self.wait(1)
+        self.play(Write(spre_por_txt5))
+
+        fire.clear()
+        fire.add(0)
+        neighborhood=[]
+        for element in fire:
+            neighborhood = neighborhood + list(G_example.neighbors(element))
+        self.play(*[g_example.vertices[e].animate.set_color(BLUE) for e in neighborhood])
+        self.wait(1)
+        self.play(*[g_example.edges[e].animate.set_color(RED) for e in G_example.edges if
+                    (e[0] in fire and e[1] in neighborhood)])
+        self.wait(1)
+        ratios=[0,0]
+        group_delayed=VGroup(fire_line_d,agent_arrow_D)
+        self.play(FadeOut(spre_por_txt5))
+        self.play(FadeOut(g_example))
+        self.wait(1)
+        self.play(Write(spre_por_txt6))
+        self.add(divide_line)
+        self.wait(1)
+        self.play(Write(spre_por_txt7))
+        self.wait(1)
+        self.play(FadeIn(i_pro_group))
+        self.wait(1)
+        self.play(GrowArrow(agent_arrow_i))
+        self.play(protect.animate.set_color(BLUE))
+        self.play(fire_line_i.animate.set_color(RED))
+        self.wait(1)
+        self.play(Write(spre_por_txt9))
+        self.wait(1)
+        self.play(Write(spre_por_txt8))
+        self.wait(1)
+        self.play(FadeIn(d_pro_group))
+        self.wait(1)
+
+
+        self.play(AnimationGroup(*[GrowArrow(arrow,lag_ratio=ratio,run_time=2) for arrow,ratio in zip(group_delayed,ratios)]))
+        self.wait(1)
+        self.play(protect_D.animate.set_color(RED))
+        self.play(Write(spre_por_txt10))
+        self.wait(1)
+
+        self.play(
+            *[FadeOut(mob) for mob in self.mobjects]
+        )
+
+
 class AnimateMFP(Scene):
     def construct(self):
 
@@ -25,6 +168,150 @@ class AnimateMFP(Scene):
 
         fire_labels=[]
         lbld=[]
+
+        spr_pro_txt = []
+        spr_pro_txt0 = Tex("Imagine any diffusive process involving an initial agent and a propagation medium:").scale(
+            0.75).move_to([0, 3 * y_step, 0])
+        spre_pro_txt1 = Tex("-A biological virus spreading in population").scale(0.75).move_to(
+            spr_pro_txt0.get_center() + [1 * x_step, -y_step, 0])
+        spre_pro_txt2 = Tex("-A computer virus on a network").scale(0.75).move_to(
+            spr_pro_txt0.get_center() + [1 * x_step, -2 * y_step, 0])
+        spre_pro_txt3 = Tex("-A fire spreading trough a forest").scale(0.75).move_to(
+            spr_pro_txt0.get_center() + [1 * x_step, -3 * y_step, 0])
+        spre_pro_txt4 = Tex("All this scenarios can be modeled by a Graph!").scale(0.75).move_to([0, 3 * y_step, 0])
+        spre_por_txt5 = Tex("We want to stop this process by protecting some vertices of the Graph").scale(
+            0.75).move_to([0, 3 * y_step, 0])
+        spre_por_txt6 = Tex(
+            "On this example, we protect vertices instantly. What happens if it takes some time to protect?").scale(
+            0.75).move_to([0, 3.5 * y_step, 0])
+        divide_line = Line(start=([0, -4.5 * y_step, 0]), end=([0, 2.5 * y_step, 0]))
+        spre_por_txt7 = Tex("INSTANT PROTECT").scale(1).move_to([-5 * x_step, 2.25 * y_step, 0])
+        spre_por_txt8 = Tex("DELAYED PROTECT").scale(1).move_to([5 * x_step, 2.25 * y_step, 0])
+        spre_por_txt9 = Tex("FIREFIGHTER PROBLEM").scale(0.5).move_to(
+            spre_por_txt7.get_center() + [0, -6.5 * y_step, 0])
+        spre_por_txt10 = Tex("MOVING FIREFIGHTER PROBLEM").scale(0.5).move_to(
+            spre_por_txt8.get_center() + [0, -6.5 * y_step, 0])
+
+        # INSTANT PROTECT GROUP
+        i_pro = []
+        agent = Circle(radius=0.25, color=BLUE, fill_opacity=1).move_to([-4.5, 0.5, 0])
+        fire = Circle(radius=0.25, color=RED, fill_opacity=1).move_to([-4, -2.5, 0])
+        protect = Circle(radius=0.25, color=WHITE, fill_opacity=1).move_to([-2, -0.5, 0])
+        fire_line_i = Arrow(start=fire.get_center(), end=protect.get_center())
+        agent_arrow_i = Arrow(start=agent.get_center(), end=protect.get_center(), color=BLUE)
+        i_pro.extend([agent, fire, protect, fire_line_i])
+        i_pro_group = VGroup(*i_pro)
+
+        # DELAYED PROTECT GROUP
+        d_pro = []
+        agent_D = Circle(radius=0.25, color=BLUE, fill_opacity=1).move_to([-4.5 + 6.5, 0.5, 0])
+        fire_D = Circle(radius=0.25, color=RED, fill_opacity=1).move_to([-4 + 6.5, -2.5, 0])
+        protect_D = Circle(radius=0.25, color=WHITE, fill_opacity=1).move_to([-2 + 6.5, -0.5, 0])
+        fire_line_d = Arrow(start=fire_D.get_center(), end=protect_D.get_center(), color=RED)
+        agent_arrow_D = Arrow(start=agent_D.get_center(),
+                              end=protect_D.get_center() + [-0.5 * x_step, +0.25 * y_step, 0], color=BLUE)
+        measure_line_a = DashedLine(start=agent_D.get_center() + [0, 0.5 * y_step, 0],
+                                    end=protect_D.get_center() + [0, 0.5 * y_step, 0])
+        measure_line_a_n = Text("5 units.").scale(0.3).set_color(ORANGE).move_to(
+            measure_line_a.get_center() + [0, 0.4 * y_step, 0])
+        measure_line_f = DashedLine(start=fire_D.get_center() + [0, -0.6 * y_step, 0],
+                                    end=protect_D.get_center() + [0, -0.6 * y_step, 0])
+        measure_line_f_n = Text("4 units.").scale(0.3).set_color(ORANGE).move_to(
+            measure_line_f.get_center() + [0, -.75 * y_step, 0])
+        d_pro.extend([agent_D, fire_D, protect_D, measure_line_a, measure_line_a_n, measure_line_f, measure_line_f_n])
+        d_pro_group = VGroup(*d_pro)
+
+        spr_pro_txt.extend([spr_pro_txt0, spre_pro_txt1, spre_pro_txt2, spre_pro_txt3])
+        spre_pro_group = VGroup(*spr_pro_txt)
+        spre_pro_group[1:].arrange(DOWN, center=False, aligned_edge=LEFT)
+        self.play(Write(spre_pro_group[0]))
+        self.wait(1)
+        c = 0
+        iter = [-5, 0, 5]
+        imgs = []
+        for txt in spre_pro_group[1:]:
+            self.play(Write(txt))
+            img = ImageMobject("images/s_" + str(c) + ".png")
+            img.scale(0.5)
+            img.move_to([iter[c] * x_step, -3 * y_step, 0])
+            imgs.extend([img])
+            self.play(FadeIn(img))
+            self.wait(1)
+            c += 1
+        img_group = Group(*imgs)
+        self.play(FadeOut(spre_pro_group))
+        self.play(Write(spre_pro_txt4))
+        G_example = nx.erdos_renyi_graph(10, 0.7, seed=100)
+        g_example = Graph(list(G_example.nodes), list(G_example.edges), labels=True,
+                          vertex_config={'radius': 0.20}) \
+            .scale(1).move_to([0, 0, 0])
+        self.play(FadeOut(img_group))
+        self.play(FadeIn(g_example))
+        self.play(g_example.vertices[0].animate.set_color(RED))
+        self.wait()
+
+        save_state = [g_example[v].save_state() for v in g_example.vertices]
+        # save_state_edges = [g_example[v].save_state() for v in g_example.edges]
+        fire = set()
+        fire.add(0)
+        neighborhood = []
+        for i in range(1, 4):
+            for element in fire:
+                neighborhood = neighborhood + list(G_example.neighbors(element))
+            self.play(*[g_example.vertices[e].animate.set_color(RED) for e in neighborhood])
+            self.wait(1)
+            fire.clear()
+            fire |= set(neighborhood)
+        self.play(*[vertex.animate.restore() for vertex in save_state])
+
+        self.play(FadeOut(spre_pro_txt4))
+        self.wait(1)
+        self.play(Write(spre_por_txt5))
+
+        fire.clear()
+        fire.add(0)
+        neighborhood = []
+        for element in fire:
+            neighborhood = neighborhood + list(G_example.neighbors(element))
+        self.play(*[g_example.vertices[e].animate.set_color(BLUE) for e in neighborhood])
+        self.wait(1)
+        self.play(*[g_example.edges[e].animate.set_color(RED) for e in G_example.edges if
+                    (e[0] in fire and e[1] in neighborhood)])
+        self.wait(1)
+        ratios = [0, 0]
+        group_delayed = VGroup(fire_line_d, agent_arrow_D)
+        self.play(FadeOut(spre_por_txt5))
+        self.play(FadeOut(g_example))
+        self.wait(1)
+        self.play(Write(spre_por_txt6))
+        self.add(divide_line)
+        self.wait(1)
+        self.play(Write(spre_por_txt7))
+        self.wait(1)
+        self.play(FadeIn(i_pro_group))
+        self.wait(1)
+        self.play(GrowArrow(agent_arrow_i))
+        self.play(protect.animate.set_color(BLUE))
+        self.play(fire_line_i.animate.set_color(RED))
+        self.wait(1)
+        self.play(Write(spre_por_txt9))
+        self.wait(1)
+        self.play(Write(spre_por_txt8))
+        self.wait(1)
+        self.play(FadeIn(d_pro_group))
+        self.wait(1)
+
+        self.play(AnimationGroup(
+            *[GrowArrow(arrow, lag_ratio=ratio, run_time=2) for arrow, ratio in zip(group_delayed, ratios)]))
+        self.wait(1)
+        self.play(protect_D.animate.set_color(RED))
+        self.play(Write(spre_por_txt10))
+        self.wait(1)
+
+        self.play(
+            *[FadeOut(mob) for mob in self.mobjects]
+        )
+
         def burnVertices(fire_t,i,f):
             fire_label= Tex(str(i-1),color=YELLOW).scale(0.3)
             for element in fire_t:
@@ -191,7 +478,6 @@ class AnimateMFP(Scene):
                 # Enter if travel time is greater than update (Time to burn!)
                 while (travel_time > update):
                     travel_time= travel_time - update
-                    print(travel_time)
                     for fire_vertex in fire:
                         neighbors = neighbors + list(G.neighbors(fire_vertex))
                     for fire_root in fire:
